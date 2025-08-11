@@ -1,0 +1,262 @@
+{% extends "core/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .event-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+    }
+    .event-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .meeting { border-color: #3b82f6; }
+    .reminder { border-color: #10b981; }
+    .task { border-color: #f59e0b; }
+    .holiday { border-color: #ef4444; }
+    .other { border-color: #8b5cf6; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Header -->
+<div class="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl shadow-lg p-6 mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-white">Welcome back, {{ user.username }}!</h1>
+            <p class="text-indigo-100 mt-2">Here's what's happening today</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="{% url 'calendar' %}" class="inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg hover:bg-white/20 transition">
+                <i class="far fa-calendar-alt mr-2"></i> View Calendar
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-md p-6 flex items-center">
+        <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+            <i class="fas fa-calendar-day text-xl"></i>
+        </div>
+        <div>
+            <p class="text-gray-500">Today's Events</p>
+            <h3 class="text-2xl font-bold">{{ today_events.count }}</h3>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-md p-6 flex items-center">
+        <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+            <i class="fas fa-tasks text-xl"></i>
+        </div>
+        <div>
+            <p class="text-gray-500">Pending Tasks</p>
+            <h3 class="text-2xl font-bold">{{ pending_tasks.count }}</h3>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-md p-6 flex items-center">
+        <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+            <i class="fas fa-star text-xl"></i>
+        </div>
+        <div>
+            <p class="text-gray-500">Upcoming Events</p>
+            <h3 class="text-2xl font-bold">{{ upcoming_events.count }}</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Events Section -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+    <div class="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+        <h2 class="text-xl font-semibold text-gray-800">Today's Schedule</h2>
+        <a href="{% url 'calendar' %}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+            View All
+        </a>
+    </div>
+    
+    {% if today_events %}
+    <div class="divide-y divide-gray-100">
+        {% for event in today_events %}
+        <div class="event-card {{ event.event_type }} p-6 hover:bg-gray-50">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="font-medium text-gray-900">{{ event.title }}</h3>
+                    <p class="text-sm text-gray-500 mt-1">
+                        <i class="far fa-clock mr-1"></i>
+                        {{ event.start_time|time }} - {{ event.end_time|time }}
+                    </p>
+                    {% if event.location %}
+                    <p class="text-sm text-gray-500 mt-1">
+                        <i class="fas fa-map-marker-alt mr-1"></i> {{ event.location }}
+                    </p>
+                    {% endif %}
+                </div>
+                <span class="px-2 py-1 text-xs rounded-full 
+                    {% if event.event_type == 'meeting' %}bg-blue-100 text-blue-800
+                    {% elif event.event_type == 'reminder' %}bg-green-100 text-green-800
+                    {% elif event.event_type == 'task' %}bg-yellow-100 text-yellow-800
+                    {% elif event.event_type == 'holiday' %}bg-red-100 text-red-800
+                    {% else %}bg-purple-100 text-purple-800{% endif %}">
+                    {{ event.get_event_type_display }}
+                </span>
+            </div>
+            {% if event.description %}
+            <p class="mt-2 text-gray-600 text-sm">{{ event.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-6 text-center text-gray-500">
+        <i class="far fa-calendar-plus text-3xl mb-2"></i>
+        <p>No events scheduled for today.</p>
+        <a href="{% url 'calendar' %}" class="text-indigo-600 hover:text-indigo-800 font-medium inline-block mt-2">
+            Add an event
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Upcoming Events Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-xl font-semibold text-gray-800">Upcoming Events</h2>
+        </div>
+        
+        {% if upcoming_events %}
+        <div class="divide-y divide-gray-100">
+            {% for event in upcoming_events %}
+            <div class="p-4 hover:bg-gray-50">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center 
+                        {% if event.event_type == 'meeting' %}bg-blue-100 text-blue-600
+                        {% elif event.event_type == 'reminder' %}bg-green-100 text-green-600
+                        {% elif event.event_type == 'task' %}bg-yellow-100 text-yellow-600
+                        {% elif event.event_type == 'holiday' %}bg-red-100 text-red-600
+                        {% else %}bg-purple-100 text-purple-600{% endif %}">
+                        <i class="far fa-calendar"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium text-gray-900">{{ event.title }}</h3>
+                        <p class="text-sm text-gray-500">
+                            {{ event.start_time|date:"M d" }} • {{ event.start_time|time }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-gray-500">
+            <i class="far fa-calendar-check text-3xl mb-2"></i>
+            <p>No upcoming events.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recent Tasks Section -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-xl font-semibold text-gray-800">Recent Tasks</h2>
+        </div>
+        
+        {% if recent_tasks %}
+        <div class="divide-y divide-gray-100">
+            {% for task in recent_tasks %}
+            <div class="p-4 hover:bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" 
+                               {% if task.completed %}checked{% endif %}>
+                        <span class="ml-3 {% if task.completed %}line-through text-gray-400{% endif %}">
+                            {{ task.title }}
+                        </span>
+                    </div>
+                    <span class="px-2 py-1 text-xs rounded-full 
+                        {% if task.priority == 'high' %}bg-red-100 text-red-800
+                        {% elif task.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-green-100 text-green-800{% endif %}">
+                        {{ task.get_priority_display }}
+                    </span>
+                </div>
+                {% if task.due_date %}
+                <p class="text-sm text-gray-500 mt-1 ml-7">
+                    <i class="far fa-clock mr-1"></i> Due {{ task.due_date|date:"M d, Y" }}
+                </p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-gray-500">
+            <i class="fas fa-tasks text-3xl mb-2"></i>
+            <p>No recent tasks.</p>
+            <a href="{% url 'task_create' %}" class="text-indigo-600 hover:text-indigo-800 font-medium inline-block mt-2">
+                Create a task
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Event Created Success Modal -->
+<div id="eventCreatedModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all">
+        <div class="p-6 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                <i class="fas fa-check text-green-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mt-3">Event Created Successfully!</h3>
+            <div class="mt-4 bg-blue-50 p-4 rounded-lg">
+                <h4 id="createdEventTitle" class="font-medium text-blue-800"></h4>
+                <p id="createdEventTime" class="text-sm text-blue-600 mt-1"></p>
+                <p id="createdEventType" class="text-xs text-blue-500 mt-2"></p>
+            </div>
+            <div class="mt-6 flex justify-center space-x-3">
+                <button onclick="closeEventCreatedModal()" 
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Close
+                </button>
+                <a href="{% url 'calendar' %}" 
+                   class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                    View Calendar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show event created modal with details
+function showEventCreated(event) {
+    document.getElementById('createdEventTitle').textContent = event.title;
+    document.getElementById('createdEventTime').textContent = 
+        `${event.start} to ${event.end}`;
+    document.getElementById('createdEventType').textContent = 
+        `Type: ${event.type.charAt(0).toUpperCase() + event.type.slice(1)}`;
+    document.getElementById('eventCreatedModal').classList.remove('hidden');
+}
+
+function closeEventCreatedModal() {
+    document.getElementById('eventCreatedModal').classList.add('hidden');
+}
+
+// If coming from event creation with success flag
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('event_created') === 'true') {
+    // You would populate this from your backend or localStorage
+    const event = {
+        title: 'New Meeting',
+        start: '10:00 AM',
+        end: '11:00 AM',
+        type: 'meeting'
+    };
+    showEventCreated(event);
+}
+</script>
+{% endblock %}

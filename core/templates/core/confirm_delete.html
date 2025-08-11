@@ -1,0 +1,27 @@
+<!-- core/templates/core/confirm_delete.html -->
+{% extends "core/base.html" %}
+
+{% block title %}Confirm Delete{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h2>
+        <p class="mb-6">Are you sure you want to delete "{{ object.title }}"?</p>
+        
+        <form method="POST">
+            {% csrf_token %}
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'task_list' %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    Delete
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
