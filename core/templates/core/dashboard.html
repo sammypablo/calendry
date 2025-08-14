@@ -21,7 +21,32 @@
 {% endblock %}
 
 {% block content %}
-<!-- Hero Header -->
+{% if not user.is_authenticated %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden p-8 text-center">
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 max-w-2xl mx-auto">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-sign-in-alt text-blue-400 text-2xl"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-lg font-medium text-blue-800">Please Sign In</h3>
+                    <p class="mt-1 text-sm text-blue-700">
+                        You need to sign in to access your personalized dashboard.
+                    </p>
+                    <div class="mt-4">
+                        <a href="{% url 'login' %}?next={% url 'dashboard' %}" 
+                           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+
 <div class="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl shadow-lg p-6 mb-8">
     <div class="flex flex-col md:flex-row justify-between items-center">
         <div>
@@ -259,4 +284,5 @@ if (urlParams.get('event_created') === 'true') {
     showEventCreated(event);
 }
 </script>
+{% endif %}
 {% endblock %}

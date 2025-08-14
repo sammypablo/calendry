@@ -21,8 +21,10 @@ from django.urls import path
 from core.views import (
     home, register_view, login_view, logout_view,
     dashboard, calendar_view, get_events,
-    create_event, update_event, delete_event, task_list, task_create, task_update, task_delete, task_toggle,
-    settings
+    create_event, EventListView, EventCreateView, 
+    EventUpdateView, EventDeleteView,
+    task_list, task_create, task_update, 
+    task_delete, task_toggle, settings
 )
 
 urlpatterns = [
@@ -33,10 +35,12 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path('dashboard/', dashboard, name='dashboard'),
     path('calendar/', calendar_view, name='calendar'),
-    path('events/', get_events, name='get_events'),
-    path('events/create/', create_event, name='create_event'),
-    path('events/<int:event_id>/update/', update_event, name='update_event'),
-    path('events/<int:event_id>/delete/', delete_event, name='delete_event'),
+    path('events/', EventListView.as_view(), name='event_list'),
+    path('events/create/', EventCreateView.as_view(), name='event_create'),
+    path('events/<int:pk>/update/', EventUpdateView.as_view(), name='event_update'),
+    path('events/<int:pk>/delete/', EventDeleteView.as_view(), name='event_delete'),
+    path('api/events/', get_events, name='get_events'),
+    path('api/events/create/', create_event, name='create_event'),
     path('tasks/', task_list, name='task_list'),
     path('tasks/create/', task_create, name='task_create'),
     path('tasks/<int:task_id>/update/', task_update, name='task_update'),

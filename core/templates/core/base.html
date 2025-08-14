@@ -27,6 +27,22 @@
             {% block auth_content %}{% endblock %}
         </main>
     {% endif %}
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check for saved dark mode preference
+        const darkMode = localStorage.getItem('darkMode') === 'true';
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+            Alpine.store('darkMode', true);
+        }
+
+        // Listen for dark mode toggles
+        document.addEventListener('dark-mode-toggled', function(e) {
+            localStorage.setItem('darkMode', e.detail);
+        });
+    });
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

@@ -11,6 +11,11 @@ from django.views.decorators.http import require_http_methods
 from .models import Event, User, Task
 from .forms import CustomUserCreationForm, LoginForm, EventForm, TaskForm
 from datetime import datetime, timedelta
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from django.contrib import messages
 import json
 import pytz
 
@@ -26,12 +31,16 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            messages.success(request, "Registration successful! You are now logged in.")
             return redirect('dashboard')
     else:
         form = CustomUserCreationForm()
     return render(request, 'core/auth/register.html', {'form': form})
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
@@ -40,23 +49,35 @@ def login_view(request):
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
-                return redirect('dashboard')
+                messages.success(request, f"Welcome back, {user.username}!")
+                next_url = request.POST.get('next', request.GET.get('next', 'dashboard'))
+                return redirect(next_url)
+        messages.error(request, "Invalid username or password.")
     else:
         form = LoginForm()
     return render(request, 'core/auth/login.html', {'form': form})
 
 def logout_view(request):
+    if request.user.is_authenticated:
+        messages.info(request, "You have been successfully signed out.")
     logout(request)
-    return redirect('login')
+    return redirect('dashboard')
 
-@login_required
 def dashboard(request):
-    today = datetime.now().date()
-    events = Event.objects.filter(user=request.user, start_time__date=today)
-    return render(request, 'core/dashboard.html', {
-        'events': events,
-        'today': today
-    })
+    if request.user.is_authenticated:
+        today = datetime.now().date()
+        events = Event.objects.filter(user=request.user, start_time__date=today)
+        tasks = Task.objects.filter(user=request.user, due_date__date=today)
+        return render(request, 'core/dashboard.html', {
+            'events': events,
+            'tasks': tasks,
+            'today': today,
+            'today_events': events,
+            'pending_tasks': Task.objects.filter(user=request.user, completed=False),
+            'upcoming_events': Event.objects.filter(user=request.user, start_time__date__gte=today).exclude(start_time__date=today)[:5],
+            'recent_tasks': Task.objects.filter(user=request.user).order_by('-created_at')[:5]
+        })
+    return render(request, 'core/dashboard.html')
 
 @login_required
 def calendar_view(request):
@@ -122,13 +143,6 @@ def create_event(request):
         'errors': form.errors.as_json()
     }, status=400)
         # ... error handling ...
-@login_required
-def delete_event(request, event_id):
-    event = get_object_or_404(Event, id=event_id, user=request.user)
-    if request.method == 'POST':
-        event.delete()
-        return JsonResponse({'status': 'success'})
-    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 def task_list(request):
     tasks = Task.objects.filter(user=request.user)
@@ -209,32 +223,76 @@ def task_delete(request, task_id):
     return render(request, 'core/confirm_delete.html', {'object': task})
 
 
+@require_POST
 @login_required
-@require_http_methods(["POST"])
 def update_event(request, event_id):
-    event = get_object_or_404(Event, id=event_id, user=request.user)
-    form = EventForm(request.POST, instance=event)
-    if form.is_valid():
-        updated_event = form.save()
+    try:
+        event = get_object_or_404(Event, id=event_id, user=request.user)
+        data = json.loads(request.body) if request.body else {}
+        
+        event.title = data.get('title', event.title)
+        event.start_time = data.get('start_time', event.start_time)
+        event.end_time = data.get('end_time', event.end_time)
+        event.event_type = data.get('event_type', event.event_type)
+        event.description = data.get('description', event.description)
+        event.save()
+        
         return JsonResponse({
             'status': 'success',
             'event': {
-                'id': updated_event.id,
-                'title': updated_event.title,
-                'start': updated_event.start_time.isoformat(),
-                'end': updated_event.end_time.isoformat(),
-                'color': updated_event.color,
-                'type': updated_event.event_type
+                'id': event.id,
+                'title': event.title,
+                'start': event.start_time.isoformat(),
+                'end': event.end_time.isoformat(),
+                'type': event.event_type
             }
         })
-    return JsonResponse({
-        'status': 'error',
-        'errors': form.errors.as_json()
-    }, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+@require_POST
 @login_required
-@require_http_methods(["POST"])
 def delete_event(request, event_id):
-    event = get_object_or_404(Event, id=event_id, user=request.user)
-    event.delete()
-    return JsonResponse({'status': 'success'})
+    try:
+        event = get_object_or_404(Event, id=event_id, user=request.user)
+        event.delete()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+
+
+class EventListView(ListView):
+    model = Event
+    template_name = 'core/events.html'
+    context_object_name = 'events'
+
+    def get_queryset(self):
+        return Event.objects.filter(user=self.request.user)
+
+class EventCreateView(CreateView):
+    model = Event
+    form_class = EventForm
+    template_name = 'core/event_form.html'
+    success_url = reverse_lazy('event_list')
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        return super().form_valid(form)
+
+class EventUpdateView(UpdateView):
+    model = Event
+    form_class = EventForm
+    template_name = 'core/event_form.html'
+    success_url = reverse_lazy('event_list')
+
+    def get_queryset(self):
+        return Event.objects.filter(user=self.request.user)
+
+class EventDeleteView(DeleteView):
+    model = Event
+    template_name = 'core/confirm_delete.html'
+    success_url = reverse_lazy('event_list')
+
+    def get_queryset(self):
+        return Event.objects.filter(user=self.request.user)    

@@ -34,12 +34,12 @@ class Event(models.Model):
     )
     
     COLOR_CHOICES = (
-        ('blue', 'Blue'),
-        ('green', 'Green'),
-        ('yellow', 'Yellow'),
-        ('red', 'Red'),
-        ('purple', 'Purple'),
-        ('pink', 'Pink')
+        ('#3b82f6', 'Blue'),
+        ('#10b981', 'Green'),
+        ('#f59e0b', 'Yellow'),
+        ('#ef4444', 'Red'),
+        ('#8b5cf6', 'Purple'),
+        ('#ec4899', 'Pink')
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -48,21 +48,36 @@ class Event(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default='meeting')
-    color = models.CharField(max_length=10, choices=COLOR_CHOICES, default='blue')
+    color = models.CharField(max_length=10, choices=COLOR_CHOICES, default='#3b82f6')
     location = models.CharField(max_length=200, blank=True)
     is_all_day = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_recurring = models.BooleanField(default=False)
+    recurrence_pattern = models.CharField(max_length=100, blank=True)
     
     def __str__(self):
         return f"{self.title} - {self.start_time.strftime('%Y-%m-%d %H:%M')}"
     
     @property
     def get_html_url(self):
-        return f'<a href="/event/{self.id}/">{self.title}</a>'
+        return f'<a href="/events/{self.id}/update/">{self.title}</a>'
+    
+    @property
+    def get_color_class(self):
+        return {
+            '#3b82f6': 'bg-blue-100 text-blue-800',
+            '#10b981': 'bg-green-100 text-green-800',
+            '#f59e0b': 'bg-yellow-100 text-yellow-800',
+            '#ef4444': 'bg-red-100 text-red-800',
+            '#8b5cf6': 'bg-purple-100 text-purple-800',
+            '#ec4899': 'bg-pink-100 text-pink-800'
+        }.get(self.color, 'bg-blue-100 text-blue-800')
     
     class Meta:
         ordering = ['start_time']
+        verbose_name = 'Event'
+        verbose_name_plural = 'Events'
 
 class Task(models.Model):
     PRIORITY_CHOICES = [
